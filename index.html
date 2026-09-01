@@ -1,0 +1,441 @@
+<canvas id="fxCanvas"></canvas>
+
+<div class="page-backdrop">
+  <div class="outer-wrapper">
+    <div class="card-frame-layer">
+      <div class="card-container">
+        
+        <div class="message-side">
+          <p id="dateLine" class="date-badge"></p>
+          <p id="nameLine" class="nickname"></p>
+          <p id="line1"></p>
+          <p id="line2"></p>
+          <p id="line3" class="highlight"></p>
+        </div>
+
+        <div class="tree-side">
+          <canvas id="treeCanvas"></canvas>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+
+  :root {
+    --bg-dark-gradient: radial-gradient(circle at top center, #4a001e 0%, #2b0010 60%, #150007 100%);
+    --card-bg: #fffbfd;
+    --heading-color: #5c0d24;
+    --text-color: #333333;
+    --accent-color: #d90429;
+    --gold-accent: #b58d44;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body {
+    width: 100%;
+    min-height: 100vh;
+    background: #150007;
+  }
+
+  /* Full Screen Background Wrapper */
+  .page-backdrop {
+    width: 100vw;
+    min-height: 100vh;
+    background: var(--bg-dark-gradient);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  #fxCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Glassmorphism Frame */
+  .outer-wrapper {
+    width: 100%;
+    max-width: 860px;
+    position: relative;
+    z-index: 20;
+  }
+
+  .card-frame-layer {
+    width: 100%;
+    background: rgba(255, 230, 238, 0.12);
+    padding: 8px;
+    border-radius: 28px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.55), inset 0 0 15px rgba(255, 255, 255, 0.12);
+  }
+
+  .card-container {
+    width: 100%;
+    background-color: var(--card-bg);
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    padding: 36px 32px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+
+  .message-side {
+    width: 54%;
+    padding-right: 12px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--text-color);
+  }
+
+  .message-side p {
+    margin-bottom: 10px;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+
+  .message-side .date-badge {
+    font-weight: 600;
+    color: var(--gold-accent);
+    font-size: 0.72rem;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .message-side .nickname {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--heading-color);
+    margin-bottom: 10px;
+    line-height: 1.25;
+    letter-spacing: -0.2px;
+  }
+
+  .message-side .highlight {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    color: var(--accent-color);
+    font-weight: 700;
+    font-size: 1.25rem;
+    margin-top: 10px;
+    margin-bottom: 0;
+  }
+
+  .tree-side {
+    width: 44%;
+    height: 300px;
+    position: relative;
+    margin-top: -20px;
+    margin-left: -38px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  canvas#treeCanvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  @media (max-width: 520px) {
+    .card-container {
+      padding: 24px 16px;
+      border-radius: 18px;
+    }
+    .message-side {
+      font-size: 0.76rem;
+      line-height: 1.45;
+    }
+    .message-side .nickname {
+      font-size: 1.25rem;
+    }
+    .message-side .highlight {
+      font-size: 1.05rem;
+    }
+    .tree-side {
+      height: 250px;
+      margin-top: -15px;
+      margin-left: -22px;
+    }
+  }
+</style>
+
+<script>
+  const fxCanvas = document.getElementById('fxCanvas');
+  const fxCtx = fxCanvas.getContext('2d');
+
+  function resizeFx() {
+    fxCanvas.width = window.innerWidth;
+    fxCanvas.height = window.innerHeight;
+  }
+  resizeFx();
+  window.addEventListener('resize', resizeFx);
+
+  const fallingHearts = [];
+  const colorPalette = ['#d90429', '#ff2a54', '#ff758f', '#a4133c', '#800f2f', '#ff8fa3', '#ff0054'];
+
+  function drawHeartShape(c, x, y, size, color) {
+    c.fillStyle = color;
+    c.beginPath();
+    const topCurveHeight = size * 0.3;
+    c.moveTo(x, y + topCurveHeight);
+    c.bezierCurveTo(x, y, x - size / 2, y, x - size / 2, y + topCurveHeight);
+    c.bezierCurveTo(x - size / 2, y + (size + topCurveHeight) / 2, x, y + size, x, y + size);
+    c.bezierCurveTo(x, y + size, x + size / 2, y + (size + topCurveHeight) / 2, x + size / 2, y + topCurveHeight);
+    c.bezierCurveTo(x + size / 2, y, x, y, x, y + topCurveHeight);
+    c.closePath();
+    c.fill();
+  }
+
+  // Spawns continuous gently falling/drifting hearts directly from the tree foliage
+  function spawnContinuousFallingHeart() {
+    if (!heartLeaves.length) return;
+    const pos = getTreeScreenPos();
+    fallingHearts.push({
+      x: pos.x,
+      y: pos.y,
+      vx: (Math.random() - 0.5) * 0.8,
+      vy: Math.random() * 1.2 + 0.6,
+      size: Math.random() * 6 + 3.5,
+      color: colorPalette[Math.floor(Math.random() * colorPalette.length)],
+      alpha: 1,
+      rotation: Math.random() * Math.PI,
+      vRot: (Math.random() - 0.5) * 0.04,
+      isPopUp: false
+    });
+  }
+
+  function spawnTreeToTextHeart(originX, originY, targetX, targetY) {
+    const dx = targetX - originX;
+    const dy = targetY - originY;
+    fallingHearts.push({
+      x: originX,
+      y: originY,
+      vx: (dx / 52) + (Math.random() - 0.5) * 1.2,
+      vy: (dy / 52) + Math.random() * 1.2,
+      size: Math.random() * 6.5 + 4,
+      color: colorPalette[Math.floor(Math.random() * colorPalette.length)],
+      alpha: 1,
+      rotation: Math.random() * Math.PI,
+      vRot: (Math.random() - 0.5) * 0.06,
+      isPopUp: false
+    });
+  }
+
+  function spawnTextHeartPop(x, y) {
+    fallingHearts.push({
+      x: x + (Math.random() - 0.5) * 8,
+      y: y + (Math.random() - 0.5) * 8,
+      vx: (Math.random() - 0.5) * 1.2,
+      vy: -Math.random() * 1.5 - 0.5,
+      size: Math.random() * 5 + 3,
+      color: colorPalette[Math.floor(Math.random() * colorPalette.length)],
+      alpha: 1,
+      rotation: Math.random() * Math.PI,
+      vRot: (Math.random() - 0.5) * 0.1,
+      isPopUp: true
+    });
+  }
+
+  function updateFallingHearts() {
+    fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+    for (let i = fallingHearts.length - 1; i >= 0; i--) {
+      const h = fallingHearts[i];
+      h.x += h.vx;
+      h.y += h.vy;
+      h.rotation += h.vRot;
+      
+      h.alpha -= h.isPopUp ? 0.035 : 0.008;
+
+      if (h.alpha <= 0 || h.y > fxCanvas.height || h.x < -20) {
+        fallingHearts.splice(i, 1);
+        continue;
+      }
+
+      fxCtx.save();
+      fxCtx.globalAlpha = h.alpha;
+      fxCtx.translate(h.x, h.y);
+      fxCtx.rotate(h.rotation);
+      drawHeartShape(fxCtx, 0, 0, h.size, h.color);
+      fxCtx.restore();
+    }
+  }
+
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const dpr = window.devicePixelRatio || 1;
+  const width = 280;
+  const height = 280;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  ctx.scale(dpr, dpr);
+
+  let trunkProgress = 0;
+  let leavesProgress = 0;
+  const heartLeaves = [];
+
+  const totalHearts = 550;
+  for (let i = 0; i < totalHearts; i++) {
+    const r = Math.sqrt(Math.random()) * 92;
+    const angle = Math.random() * Math.PI * 2;
+    const x = 140 + r * Math.cos(angle) * 0.95;
+    const y = 105 + r * Math.sin(angle) * 0.82;
+    const size = Math.random() * 8.5 + 4.5;
+    const color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+    heartLeaves.push({ x, y, size, color, delay: Math.random() * 0.6 });
+  }
+
+  let typewriterStarted = false;
+
+  function animate() {
+    ctx.clearRect(0, 0, width, height);
+    updateFallingHearts();
+
+    if (trunkProgress < 1) trunkProgress += 0.016;
+
+    ctx.lineWidth = 12;
+    ctx.strokeStyle = '#6a3b1d';
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(140, 270);
+    const currentTrunkY = 270 - (115 * Math.min(trunkProgress, 1));
+    ctx.lineTo(140, currentTrunkY);
+    ctx.stroke();
+
+    if (trunkProgress > 0.45) {
+      const bProgress = (trunkProgress - 0.45) * 1.8;
+      ctx.lineWidth = 4.5;
+
+      ctx.beginPath();
+      ctx.moveTo(140, 195);
+      ctx.quadraticCurveTo(120, 180, 90 - (15 * bProgress), 140);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(140, 185);
+      ctx.quadraticCurveTo(160, 170, 190 + (15 * bProgress), 130);
+      ctx.stroke();
+    }
+
+    if (trunkProgress >= 0.8) {
+      leavesProgress += 0.014;
+      heartLeaves.forEach(heart => {
+        if (leavesProgress > heart.delay) {
+          const bloomScale = Math.min((leavesProgress - heart.delay) * 2.5, 1);
+          ctx.save();
+          ctx.globalAlpha = bloomScale;
+          drawHeartShape(ctx, heart.x, heart.y, heart.size * bloomScale, heart.color);
+          ctx.restore();
+        }
+      });
+
+      // Continuously drop hearts once leaves are blooming
+      if (Math.random() < 0.3) {
+        spawnContinuousFallingHeart();
+      }
+    }
+
+    if (leavesProgress > 0.4 && !typewriterStarted) {
+      typewriterStarted = true;
+      startTypewriter();
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  requestAnimationFrame(animate);
+
+  const textDate = "September 2 ✨";
+  const textName = "Happy Birthday, Rach, babe! 🎂💗";
+  const textLine1 = "Happy Birthday to the one who makes my world so much brighter. Being with you is my favorite part of every day, and I’m so grateful for every moment we share.";
+  const textLine2 = "I hope your day is as incredible, loving, and beautiful as you are.";
+  const textLine3 = "Te amo! ❤️";
+
+  function getTreeScreenPos() {
+    const treeRect = canvas.getBoundingClientRect();
+    const randLeaf = heartLeaves[Math.floor(Math.random() * heartLeaves.length)];
+    return {
+      x: treeRect.left + (randLeaf.x * (treeRect.width / width)),
+      y: treeRect.top + (randLeaf.y * (treeRect.height / height))
+    };
+  }
+
+  function getGraphemes(text) {
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+      const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+      return Array.from(segmenter.segment(text), s => s.segment);
+    }
+    return Array.from(text);
+  }
+
+  function typeWriter(elementId, text, speed, callback) {
+    const characters = getGraphemes(text);
+    let i = 0;
+    const el = document.getElementById(elementId);
+    
+    function type() {
+      if (i < characters.length) {
+        const char = characters[i];
+        el.appendChild(document.createTextNode(char));
+
+        const rect = el.getBoundingClientRect();
+        const cursorX = rect.left + el.offsetWidth;
+        const cursorY = rect.top + (rect.height / 2);
+
+        if (i % 2 === 0) {
+          const tPos = getTreeScreenPos();
+          spawnTreeToTextHeart(tPos.x, tPos.y, cursorX, cursorY);
+        }
+
+        if (char !== ' ' && Math.random() < 0.6) {
+          spawnTextHeartPop(cursorX, cursorY);
+        }
+
+        i++;
+        setTimeout(type, speed);
+      } else if (callback) {
+        callback();
+      }
+    }
+    type();
+  }
+
+  function startTypewriter() {
+    typeWriter('dateLine', textDate, 40, () => {
+      typeWriter('nameLine', textName, 40, () => {
+        typeWriter('line1', textLine1, 35, () => {
+          typeWriter('line2', textLine2, 35, () => {
+            typeWriter('line3', textLine3, 45);
+          });
+        });
+      });
+    });
+  }
+</script>
